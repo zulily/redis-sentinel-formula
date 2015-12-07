@@ -1,0 +1,11 @@
+{% set redis = salt['grains.filter_by']({
+    'Debian': {
+        'package': 'redis-server',
+        'service': 'redis-server',
+        'conf_file': '/etc/redis/redis.conf',
+        'redis_server_bin': '/usr/bin/redis-server',
+        'sentinel_conf_file': '/etc/redis/sentinel.conf',
+        'user': 'redis',
+        'group': 'redis',
+    },
+}) %}

@@ -1,0 +1,79 @@
+#! /bin/bash
+#
+# A simple init script to start/stop/restart/report on status for all configured 
+# Redis instances and any instances that are members of a shard group
+#
+# Leverages the redis-server-instance upstart script.
+# 
+# Initially, an upstart wrapper script for all, shard group, and specific instances
+# has not been written as handling PID files and stop/restart/status commands from
+# the wrapper does not appear simple to implement cleanly
+#
+
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+DAEMON=/usr/bin/redis-server
+NAME=redis-server
+
+RUNDIR=/var/run/redis
+
+test -x $DAEMON || exit 0
+
+#set -e
+
+test -r /etc/default/$NAME && . /etc/default/$NAME
+
+SHARD_GROUP=$2
+
+# If $SHARD_GROUP is set, manage for the specified shard group only
+if [ $# -eq 2 ]
+then
+    INSTANCE_IDS=`for i in exec ls /etc/redis/redis_"$2"_[0-9]*.conf; do echo $i |awk -F'/etc/redis/redis_' '{ print $2 }' |awk -F'.conf' '{ print $1 }'; done`
+else
+    INSTANCE_IDS=`for i in exec ls /etc/redis/redis_*.conf; do echo $i |awk -F'/etc/redis/redis_' '{ print $2 }' |awk -F'.conf' '{ print $1 }'; done`
+fi
+
+
+case "$1" in
+  start)
+    mkdir -p $RUNDIR
+    chown redis.redis $RUNDIR
+    chmod 755 $RUNDIR
+
+    for instance in $INSTANCE_IDS
+    do
+        start redis-server-instance instance_id=$instance
+    done    
+    ;;
+
+  stop)
+    for instance in $INSTANCE_IDS
+    do
+        stop redis-server-instance instance_id=$instance
+    done    
+    sleep 1
+    ;;
+
+  restart|force-reload)
+    for instance in $INSTANCE_IDS
+    do
+        stop redis-server-instance instance_id=$instance
+        start redis-server-instance instance_id=$instance
+    done    
+    ;;
+
+  status)
+    for instance in $INSTANCE_IDS
+    do
+        status redis-server-instance instance_id=$instance
+    done    
+    ;;
+
+  *)
+    N=/etc/init.d/$NAME
+    echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
+    exit 1
+    ;;
+esac
+
+exit 0

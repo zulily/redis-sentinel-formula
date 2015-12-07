@@ -1,0 +1,49 @@
+redis_sentinel:
+  sentinel_port: 26379
+  shard_groups:
+    - sessions:
+      - 0:
+          port: 6379
+          first_master: redis1
+          description: "All user sessions, currently not sharded"
+          bind_ip: 0.0.0.0
+          sentinel_conf:
+            quorum_size: 2
+            auth_pass: my_secret
+            down_after_milliseconds: 3000
+            parallel_syncs: 1
+            failover_timeout: 10000
+          redis_conf:
+            - databases: 1
+            - timeout: 300
+            - loglevel: warning
+            - maxmemory: 200mb
+            - activerehashing: "yes"
+            - requirepass: my_secret
+            - masterauth: my_secret
+          members:
+            - redis1
+            - redis2
+    - results:
+      - 0:
+          port: 6380
+          first_master: redis2
+          description: "Cached results data, currently not sharded"
+          bind_ip: 0.0.0.0
+          sentinel_conf:
+            quorum_size: 2
+            auth_pass: my_secret
+            down_after_milliseconds: 10000
+            parallel_syncs: 1
+            failover_timeout: 30000
+          redis_conf:
+            - databases: 1
+            - timeout: 300
+            - loglevel: warning
+            - maxmemory: 200mb
+            - activerehashing: "yes"
+            - requirepass: my_secret
+            - masterauth: my_secret
+          members:
+            - redis1
+            - redis2
